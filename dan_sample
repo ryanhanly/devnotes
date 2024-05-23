@@ -1,0 +1,41 @@
+# from Dan - We can adapt this script. It reads the secrets from the vault as you
+# and then sets environment variables before opening a sub-shell or running a command.
+#!/bin/bash
+
+VAULT_NAME=$1
+
+if [[ -z $VAULT_NAME ]]
+then
+    echo "$0 ERROR: Specify vault name. Usage: $0 <vault name>" >&2
+    exit 1
+fi
+
+if [[ ! -x $(which az) ]]
+thens
+    echo "$0 ERROR: Unable to execute Azure CLI. Is it in your PATH?" >&2
+    exit 1
+fi
+
+if ! az account show > /dev/null 2>&1
+then
+    echo "$0 ERROR: You are not logged in to the Azure CLI." >&2
+    exit 1
+fi
+
+ARM_TENANT_ID=$(az keyvault secret show --name ARMTENANTID --vault-name $VAULT_NAME --query value -o tsv)
+ARM_CLIENT_ID=$(az keyvault secret show --name TERRAFORMCLIENTID --vault-name $VAULT_NAME --query value -o tsv)
+ARM_CLIENT_SECRET=$(az keyvault secret show --name TERRAFORMCLIENTSECRET --vault-name $VAULT_NAME --query value -o tsv)
+
+AZ_BIN=$(which az)
+
+# Set up temporary Azure CLI configuration location and ensure it is deleted on exit.
+export AZURE_CONFIG_DIR=$(mktemp -d)
+function cleanup {
+  rm -rf "$AZURE_CONFIG_DIR"
+}
+trap cleanup EXIT
+
+echo "$AZ_BIN login --service-principal -u $ARM_CLIENT_ID -p $ARM_CLIENT_SECRET --tenant $ARM_TENANT_ID" > $AZURE_CONFIG_DIR/.shell
+echo 'export PS1="(azurecli/terraform) $PS1"' >> $AZURE_CONFIG_DIR/.shell
+
+bash --init-file $AZURE_CONFIG_DIR/.shell
