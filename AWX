@@ -1,0 +1,6 @@
+ cd awx-ee-havi/
+  151   . ./.venv/bin/activate
+  152  podman system migrate
+  153  pip install -r requirements.txt
+  154  ansible-builder build --tag ctdlhubeus2devacr.azurecr.io/awx-ee-havi
+  
