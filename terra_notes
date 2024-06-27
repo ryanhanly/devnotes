@@ -1,0 +1,7 @@
+az login
+az account set --subscription "HAVI North America Citadel Hub Dev"
+cd stacks/citadel_azure_hub/
+terragrunt workspace select en01
+terragrunt init
+terragrunt plan
+terragrunt apply
